@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 )
 
 // queryBeersReturn matches the structure of the JSON returned by the BreweryDB /beers endpoint.
@@ -95,22 +96,34 @@ func parseQueryBeersAPI(data []byte) ([]beerDetails, int, int, error) {
 
 func main() {
 	config, err := loadBreweryDBConfig()
-
 	if err != nil {
 		log.Fatalf("%s", err.Error())
 	}
 
-	rawResults, err := queryBeersAPI(1, config.Endpoint, config.APIKey)
+	// beers will contain the final, concatenated results
+	var beers []beerDetails
+	// results will contain just the results from any particular query
+	var results []beerDetails
+	var currPage int
+	// maxPage is intentionally set here because we don't know how many pages the query will have until we return
+	maxPage := 1
+	for currPage = 1; currPage <= maxPage; currPage++ {
+		rawResults, err := queryBeersAPI(currPage, config.Endpoint, config.APIKey)
+		if err != nil {
+			log.Fatalf("%s", err.Error())
+		}
 
-	if err != nil {
-		log.Fatalf("%s", err.Error())
+		// maxPage gets set with the correct number here, this also accounts for the number of pages changing
+		results, currPage, maxPage, err = parseQueryBeersAPI(rawResults)
+		if err != nil {
+			log.Fatalf("%s", err.Error())
+		}
+		beers = append(beers, results...)
+
+		// BreweryDB's API has a limit of 10 requests per second, this is a dumb implementation to honour that
+		// TODO: implement smarter version that takes into account time since query
+		time.Sleep(120 * time.Millisecond)
 	}
 
-	results, currentPage, maxPage, err := parseQueryBeersAPI(rawResults)
-
-	if err != nil {
-		log.Fatalf("%s", err.Error())
-	}
-
-	log.Printf("Received results:\nCurrent Page: %d\nTotal Pages: %d\nBeer results: %+v", currentPage, maxPage, results)
+	log.Printf("Received results:\n%+v", beers)
 }
