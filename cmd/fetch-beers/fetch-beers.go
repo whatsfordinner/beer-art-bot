@@ -182,7 +182,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("%s", err.Error())
 	}
-	log.Printf("Received results:\n%+v\n%+v", names, styles)
 
 	err = writeOutputToDisk(names, "beer_names.json")
 	if err != nil {
