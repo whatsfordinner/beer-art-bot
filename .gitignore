@@ -1,1 +1,2 @@
 cmd/fetch-beers/fetch-beers.sh
+cmd/fetch-beers/*.json

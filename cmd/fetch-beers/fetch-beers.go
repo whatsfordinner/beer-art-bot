@@ -31,6 +31,10 @@ type beerDetails struct {
 	Style string `json:"style"`
 }
 
+type beerOutput struct {
+	BeerData []string `json:"beerData"`
+}
+
 // breweryDBConfig contains configuration details for accessing the BreweryDB API.
 type breweryDBConfig struct {
 	Endpoint string
@@ -61,6 +65,7 @@ func loadBreweryDBConfig() (breweryDBConfig, error) {
 	return config, nil
 }
 
+// sliceContains is a utility function for determining if a beer or style has been seen already.
 func sliceContains(s []string, e string) bool {
 	for _, i := range s {
 		if i == e {
@@ -70,6 +75,7 @@ func sliceContains(s []string, e string) bool {
 	return false
 }
 
+// appendIfUnique is a utility function for only adding a beer or style that has already been seen.
 func appendIfUnique(s []string, e string) []string {
 	if len(e) != 0 && !sliceContains(s, e) {
 		return append(s, e)
@@ -111,16 +117,16 @@ func parseQueryBeersAPI(data []byte) ([]beerDetails, int, int, error) {
 	return beers, parsedResponse.CurrentPage, parsedResponse.NumberOfPages, nil
 }
 
-func main() {
+func getBeerData() (beerOutput, beerOutput, error) {
 	config, err := loadBreweryDBConfig()
 	if err != nil {
 		log.Fatalf("%s", err.Error())
 	}
 
-	// beersNames will contain the final list of unique beers
-	var beerNames []string
-	// beerStyles will contain the final list of unique beer styles
-	var beerStyles []string
+	// names will contain the final list of unique beers
+	var names beerOutput
+	// styles will contain the final list of unique beer styles
+	var styles beerOutput
 	// results will contain just the results from any particular query
 	var results []beerDetails
 	var currPage int
@@ -129,18 +135,18 @@ func main() {
 	for currPage = 1; currPage <= maxPage; currPage++ {
 		rawResults, err := queryBeersAPI(currPage, config.Endpoint, config.APIKey)
 		if err != nil {
-			log.Fatalf("%s", err.Error())
+			return names, styles, err
 		}
 
 		// maxPage gets set with the correct number here, this also accounts for the number of pages changing
 		results, currPage, maxPage, err = parseQueryBeersAPI(rawResults)
 		if err != nil {
-			log.Fatalf("%s", err.Error())
+			return names, styles, err
 		}
 
 		for _, b := range results {
-			beerNames = appendIfUnique(beerNames, b.Name)
-			beerStyles = appendIfUnique(beerStyles, b.Style)
+			names.BeerData = appendIfUnique(names.BeerData, b.Name)
+			styles.BeerData = appendIfUnique(styles.BeerData, b.Style)
 		}
 
 		// BreweryDB's API has a limit of 10 requests per second, this is a dumb implementation to honour that
@@ -148,5 +154,45 @@ func main() {
 		time.Sleep(120 * time.Millisecond)
 	}
 
-	log.Printf("Received results:\n%+v\n%+v", beerNames, beerStyles)
+	return names, styles, nil
+}
+
+// writeOutputToDisk will marshal a BeerOutput into a JSON string and write it to the working directory.
+func writeOutputToDisk(output beerOutput, filename string) error {
+	outputBlob, err := json.Marshal(output)
+	if err != nil {
+		return err
+	}
+	workingDirectory, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+
+	log.Printf("writing file: %s in directory %s", filename, workingDirectory)
+	err = ioutil.WriteFile(filename, outputBlob, 0644)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func main() {
+	names, styles, err := getBeerData()
+	if err != nil {
+		log.Fatalf("%s", err.Error())
+	}
+	log.Printf("Received results:\n%+v\n%+v", names, styles)
+
+	err = writeOutputToDisk(names, "beer_names.json")
+	if err != nil {
+		log.Fatalf("%s", err.Error())
+	}
+
+	err = writeOutputToDisk(styles, "beer_styles.json")
+	if err != nil {
+		log.Fatalf("%s", err.Error())
+	}
+
+	log.Printf("data fetch complete")
 }
