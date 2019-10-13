@@ -42,6 +42,7 @@ func loadBreweryDBConfig() (breweryDBConfig, error) {
 	log.Printf("fetching environment variables")
 	var config breweryDBConfig
 
+	// BREWERYDB_ENDPOINT is not necessarily a static thing: BreweryDB offers a sandbox API as well as a prod one
 	endpoint, exists := os.LookupEnv("BREWERYDB_ENDPOINT")
 	if !exists {
 		err := errors.New("environment variable BREWERYDB_ENDPOINT not found")
@@ -58,6 +59,22 @@ func loadBreweryDBConfig() (breweryDBConfig, error) {
 	config.APIKey = apiKey
 
 	return config, nil
+}
+
+func sliceContains(s []string, e string) bool {
+	for _, i := range s {
+		if i == e {
+			return true
+		}
+	}
+	return false
+}
+
+func appendIfUnique(s []string, e string) []string {
+	if len(e) != 0 && !sliceContains(s, e) {
+		return append(s, e)
+	}
+	return s
 }
 
 // queryBeersAPI is a basic wrapper around the BreweryDB API.
@@ -87,8 +104,8 @@ func parseQueryBeersAPI(data []byte) ([]beerDetails, int, int, error) {
 		return beers, 0, 0, err
 	}
 
-	for i := range parsedResponse.Data {
-		beers = append(beers, beerDetails{parsedResponse.Data[i].NameDisplay, parsedResponse.Data[i].Style.ShortName})
+	for _, i := range parsedResponse.Data {
+		beers = append(beers, beerDetails{i.NameDisplay, i.Style.ShortName})
 	}
 
 	return beers, parsedResponse.CurrentPage, parsedResponse.NumberOfPages, nil
@@ -100,12 +117,14 @@ func main() {
 		log.Fatalf("%s", err.Error())
 	}
 
-	// beers will contain the final, concatenated results
-	var beers []beerDetails
+	// beersNames will contain the final list of unique beers
+	var beerNames []string
+	// beerStyles will contain the final list of unique beer styles
+	var beerStyles []string
 	// results will contain just the results from any particular query
 	var results []beerDetails
 	var currPage int
-	// maxPage is intentionally set here because we don't know how many pages the query will have until we return
+	// maxPage is intentionally set here because we don't know how many pages the query will have until we return the first time
 	maxPage := 1
 	for currPage = 1; currPage <= maxPage; currPage++ {
 		rawResults, err := queryBeersAPI(currPage, config.Endpoint, config.APIKey)
@@ -118,12 +137,16 @@ func main() {
 		if err != nil {
 			log.Fatalf("%s", err.Error())
 		}
-		beers = append(beers, results...)
+
+		for _, b := range results {
+			beerNames = appendIfUnique(beerNames, b.Name)
+			beerStyles = appendIfUnique(beerStyles, b.Style)
+		}
 
 		// BreweryDB's API has a limit of 10 requests per second, this is a dumb implementation to honour that
 		// TODO: implement smarter version that takes into account time since query
 		time.Sleep(120 * time.Millisecond)
 	}
 
-	log.Printf("Received results:\n%+v", beers)
+	log.Printf("Received results:\n%+v\n%+v", beerNames, beerStyles)
 }
