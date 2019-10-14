@@ -6,6 +6,20 @@ import (
 	"time"
 )
 
+// queryBeersReturn matches the structure of the JSON returned by the BreweryDB /beers endpoint.
+// It intentionally omits most of the returned fields to ensure only those fields we care about
+// are retained
+type queryBeersReturn struct {
+	CurrentPage   int `json:"currentPage"`
+	NumberOfPages int `json:"numberOfPages"`
+	Data          []struct {
+		NameDisplay string `json:"nameDisplay"`
+		Style       struct {
+			ShortName string `json:"shortName"`
+		} `json:"style"`
+	} `json:"data"`
+}
+
 // beerDetails is a flat struct of only the information we care about for creating the corpus.
 type beerDetails struct {
 	Name  string `json:"name"`
