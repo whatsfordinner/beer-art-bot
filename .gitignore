@@ -1,2 +1,3 @@
-cmd/fetch-beers/fetch-beers.sh
-cmd/fetch-beers/*.json
+cmd/getbeers/*.sh
+cmd/getbeers/*.json
+cmd/getbeers/getbeers

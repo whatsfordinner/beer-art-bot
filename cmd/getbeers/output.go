@@ -5,10 +5,12 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+
+	"github.com/whatsfordinner/beer-art-bot/pkg/brewerydb"
 )
 
 // writeOutputToDisk will marshal a BeerOutput into a JSON string and write it to the working directory.
-func writeOutputToDisk(output beerOutput, filename string) error {
+func writeOutputToDisk(output brewerydb.BeerOutput, filename string) error {
 	outputBlob, err := json.Marshal(output)
 	if err != nil {
 		return err

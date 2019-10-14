@@ -2,10 +2,12 @@ package main
 
 import (
 	"log"
+
+	"github.com/whatsfordinner/beer-art-bot/pkg/brewerydb"
 )
 
 func main() {
-	names, styles, err := getBeerData()
+	names, styles, err := brewerydb.GetBeerData()
 	if err != nil {
 		log.Fatalf("%s", err.Error())
 	}
