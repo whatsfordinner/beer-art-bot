@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"os"
+	"strings"
 
 	prose "gopkg.in/jdkato/prose.v2"
 
@@ -47,14 +48,19 @@ func main() {
 
 	log.Printf("starting to parse beers")
 	for _, beer := range beers.BeerData {
-		processedBeer, err := prose.NewDocument(beer)
+		processedBeer, err := prose.NewDocument(strings.ToLower(beer))
 		if err != nil {
 			log.Fatalf(err.Error())
 		}
 
+		// join the tokens to form a string
+		tags := []string{}
 		for _, token := range processedBeer.Tokens() {
-			log.Printf("%s %s", token.Text, token.Tag)
+			tags = append(tags, token.Tag)
 		}
+
+		tagString := strings.Join(tags, " ")
+		log.Printf("%s: %s", beer, tagString)
 	}
 
 	log.Printf("done")
