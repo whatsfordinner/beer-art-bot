@@ -1,3 +1,4 @@
+//TODO(whatsfordinner): comment your code, you monster
 package main
 
 import (
@@ -17,6 +18,7 @@ import (
 
 func main() {
 	log.Printf("creating new AWS session")
+	//TODO(whatsfordinner): separate config into struct and own function/init
 	bucket, exist := os.LookupEnv("CORPUS_BUCKET")
 	if !exist {
 		log.Fatalf("CORPUS_BUCKET not set, cannot continue")
@@ -27,6 +29,7 @@ func main() {
 		log.Fatalf("CORPUS_REGION not set, cannot continue")
 	}
 
+	//TODO(whatsfordinner): shoud potentially all go into one package for AWS interactions
 	sess, err := session.NewSession(&aws.Config{
 		Region: aws.String(region),
 	})
@@ -48,6 +51,7 @@ func main() {
 
 	log.Printf("starting to parse beers")
 	for _, beer := range beers.BeerData {
+		//TODO(whatsfordinner): this needs to be handled concurrently, way too slow
 		processedBeer, err := prose.NewDocument(strings.ToLower(beer))
 		if err != nil {
 			log.Fatalf(err.Error())

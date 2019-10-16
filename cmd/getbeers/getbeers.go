@@ -1,3 +1,4 @@
+//TODO(whatsfordinner): comment your code, you monster
 package main
 
 import (
@@ -19,6 +20,7 @@ func main() {
 		log.Fatalf("%s", err.Error())
 	}
 
+	//TOOD(whatsfordinner): DRY. separate into function or make method in brewerydb package
 	log.Printf("converting %d beer names to JSON blob", len(names.BeerData))
 	namesBlob, err := json.Marshal(names)
 	if err != nil {
@@ -31,6 +33,7 @@ func main() {
 		log.Fatalf("%s", err.Error())
 	}
 
+	//TODO(whatsfordinner): separate config into struct and own function/init()
 	bucket, exist := os.LookupEnv("UPLOAD_BUCKET")
 	if !exist {
 		log.Fatalf("UPLOAD_BUCKET not set, cannot continue")
@@ -40,6 +43,7 @@ func main() {
 		log.Fatalf("UPLOAD_REGION not set, cannot continue")
 	}
 
+	//TODO(whatsfordinner): should potentially all go into one package for AWS interactions
 	log.Printf("creating new AWS session")
 	sess, err := session.NewSession(&aws.Config{
 		Region: aws.String(region),
