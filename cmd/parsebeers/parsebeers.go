@@ -6,11 +6,13 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 
 	prose "gopkg.in/jdkato/prose.v2"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/comprehend"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/whatsfordinner/beer-art-bot/pkg/brewerydb"
@@ -49,12 +51,42 @@ func main() {
 		log.Fatalf("%s", err.Error())
 	}
 
-	log.Printf("starting to parse beers")
-	for _, beer := range beers.BeerData {
-		//TODO(whatsfordinner): this needs to be handled concurrently, way too slow
-		processedBeer, err := prose.NewDocument(strings.ToLower(beer))
+	numBeers := 20
+	beersToParse := beers.BeerData[0:numBeers]
+	startTime := time.Now()
+	proseResults, err := parseBeersWithProse(beersToParse)
+	if err != nil {
+		log.Fatalf("%s", err)
+	}
+	finishTime := time.Now()
+	log.Printf("Parsing %d beers with prose took %v", numBeers, finishTime.Sub(startTime))
+
+	awsBeers := []*string{}
+	for _, beer := range beersToParse {
+		awsBeers = append(awsBeers, aws.String(strings.ToLower(beer)))
+	}
+
+	startTime = time.Now()
+	comprehendResults, err := parseBeersWithComprehend(awsBeers, sess)
+	if err != nil {
+		log.Fatalf("%s", err)
+	}
+	finishTime = time.Now()
+	log.Printf("Parsing %d beers with comprehend took %v", numBeers, finishTime.Sub(startTime))
+	for i, beer := range proseResults {
+		log.Printf("%s:\n\tprose:\t\t%s\n\tcomprehend:\t%s", beers.BeerData[i], beer, comprehendResults[i])
+	}
+
+	log.Printf("done")
+}
+
+func parseBeersWithProse(beers []string) ([]string, error) {
+	log.Printf("starting to parse %d beers with prose", len(beers))
+	taggedBeers := []string{}
+	for _, beer := range beers {
+		processedBeer, err := prose.NewDocument(beer)
 		if err != nil {
-			log.Fatalf(err.Error())
+			return taggedBeers, err
 		}
 
 		// join the tokens to form a string
@@ -63,11 +95,34 @@ func main() {
 			tags = append(tags, token.Tag)
 		}
 
-		tagString := strings.Join(tags, " ")
-		log.Printf("%s: %s", beer, tagString)
+		taggedBeers = append(taggedBeers, strings.Join(tags, " "))
 	}
 
-	log.Printf("done")
+	return taggedBeers, nil
+}
+
+func parseBeersWithComprehend(beers []*string, sess *session.Session) ([]string, error) {
+	log.Printf("starting to parse %d beers with comprehend", len(beers))
+	svc := comprehend.New(sess)
+	taggedBeers := []string{}
+	result, err := svc.BatchDetectSyntax(&comprehend.BatchDetectSyntaxInput{
+		LanguageCode: aws.String("en"),
+		TextList:     beers,
+	})
+
+	if err != nil {
+		return taggedBeers, err
+	}
+
+	for _, results := range result.ResultList {
+		tags := []string{}
+		for _, tokens := range results.SyntaxTokens {
+			tags = append(tags, *tokens.PartOfSpeech.Tag)
+		}
+		taggedBeers = append(taggedBeers, strings.Join(tags, " "))
+	}
+
+	return taggedBeers, nil
 }
 
 func getByteSliceFromS3(bucket string, key string, downloader *s3manager.Downloader) ([]byte, error) {
