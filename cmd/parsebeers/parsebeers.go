@@ -28,7 +28,6 @@ func main() {
 		log.Fatalf("CORPUS_REGION not set, cannot continue")
 	}
 
-	//TODO(whatsfordinner): shoud potentially all go into one package for AWS interactions
 	sess, err := session.NewSession(&aws.Config{
 		Region: aws.String(region),
 	})
@@ -54,13 +53,17 @@ func main() {
 	for _, beer := range beersToParse {
 		awsBeers = append(awsBeers, aws.String(strings.ToLower(beer)))
 	}
+	//TODO(whatsfordinner): comprehend costs money so we should only be comprehending beers that
+	// haven't been read yet
 	comprehendResults, err := parseBeersWithComprehend(awsBeers, sess)
 	if err != nil {
 		log.Fatalf("%s", err)
 	}
 	finishTime := time.Now()
 	log.Printf("Parsing %d beers with comprehend took %v", numBeers, finishTime.Sub(startTime))
-	log.Printf("%v", comprehendResults)
+
+	tally := createSyntaxTally(comprehendResults)
+	log.Printf("Syntax tally:\n%+v", tally)
 	log.Printf("done")
 }
 
@@ -68,6 +71,8 @@ func parseBeersWithComprehend(beers []*string, sess *session.Session) ([]string,
 	log.Printf("starting to parse %d beers with comprehend", len(beers))
 	svc := comprehend.New(sess)
 	taggedBeers := []string{}
+	//TODO(whatsfordinner): BatchDetectSyntax can only comprehend 25 entries at once so this
+	// needs to be configured to process all the beers through batches of 25
 	result, err := svc.BatchDetectSyntax(&comprehend.BatchDetectSyntaxInput{
 		LanguageCode: aws.String("en"),
 		TextList:     beers,
@@ -86,4 +91,14 @@ func parseBeersWithComprehend(beers []*string, sess *session.Session) ([]string,
 	}
 
 	return taggedBeers, nil
+}
+
+func createSyntaxTally(beers []string) map[string]int {
+	tally := make(map[string]int)
+
+	for _, syntax := range beers {
+		tally[syntax] = tally[syntax] + 1
+	}
+
+	return tally
 }
