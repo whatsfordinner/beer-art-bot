@@ -52,3 +52,33 @@ func TestAppendIfUnique(t *testing.T) {
 		})
 	}
 }
+
+var xorTests = map[string]struct {
+	inputA         []string
+	inputB         []string
+	expectedOutput []string
+}{
+	"empty slices":       {[]string{}, []string{}, []string{}},
+	"no unique elements": {[]string{"foo", "bar", "baz"}, []string{"foo", "bar", "baz"}, []string{}},
+	"unique in first":    {[]string{"foo", "bar", "baz"}, []string{"foo", "bar"}, []string{"baz"}},
+	"unique in second":   {[]string{"bar", "baz"}, []string{"foo", "bar", "baz"}, []string{"foo"}},
+	"unique in both":     {[]string{"foo", "bar"}, []string{"bar", "baz"}, []string{"foo", "baz"}},
+}
+
+func TestGetMutuallyExclusiveElements(t *testing.T) {
+	for test, tt := range xorTests {
+		t.Run(test, func(t *testing.T) {
+			result := GetMutuallyExclusiveElements(tt.inputA, tt.inputB)
+
+			if len(result) != len(tt.expectedOutput) {
+				t.Errorf("length mistmatch. Expected %d elements but got %d elements\n", len(tt.expectedOutput), len(result))
+			}
+
+			for i := range result {
+				if result[i] != tt.expectedOutput[i] {
+					t.Errorf("element mismatch. Expected %s but got %s\n", result[i], tt.expectedOutput[i])
+				}
+			}
+		})
+	}
+}

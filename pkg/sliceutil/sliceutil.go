@@ -17,3 +17,23 @@ func AppendIfUnique(s []string, e string) []string {
 	}
 	return s
 }
+
+// GetMutuallyExclusiveElements is a utility function that takes in two lists and returns only those
+// elements that exist in one list but not both.
+func GetMutuallyExclusiveElements(a []string, b []string) []string {
+	s := []string{}
+
+	for _, e := range a {
+		if !SliceContains(b, e) {
+			s = AppendIfUnique(s, e)
+		}
+	}
+
+	for _, e := range b {
+		if !SliceContains(a, e) {
+			s = AppendIfUnique(s, e)
+		}
+	}
+
+	return s
+}
