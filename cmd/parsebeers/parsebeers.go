@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log"
 	"os"
+	"sort"
 	"strings"
 	"time"
 
@@ -35,26 +36,31 @@ func main() {
 		log.Fatalf("%s", err.Error())
 	}
 
+	// get the list of all beers from S3
 	beerBytes, err := awsutil.GetByteSliceFromS3(bucket, "beer_names.json", sess)
 	if err != nil {
 		log.Fatalf("%s", err.Error())
 	}
-
 	var beers brewerydb.BeerOutput
 	err = json.Unmarshal(beerBytes, &beers)
 	if err != nil {
 		log.Fatalf("%s", err.Error())
 	}
 
+	// get the list of all beers that have already been processed from S3
+
+	// make a slice of beer names that contain only beers that haven't been processed
 	numBeers := 20
 	beersToParse := beers.BeerData[0:numBeers]
-	startTime := time.Now()
+	// convert the strings to string pointers for use with the AWS SDK
 	awsBeers := []*string{}
 	for _, beer := range beersToParse {
 		awsBeers = append(awsBeers, aws.String(strings.ToLower(beer)))
 	}
 	//TODO(whatsfordinner): comprehend costs money so we should only be comprehending beers that
 	// haven't been read yet
+	startTime := time.Now()
+	// get the beers tagged for parts of speech by comprehend
 	comprehendResults, err := parseBeersWithComprehend(awsBeers, sess)
 	if err != nil {
 		log.Fatalf("%s", err)
@@ -62,8 +68,36 @@ func main() {
 	finishTime := time.Now()
 	log.Printf("Parsing %d beers with comprehend took %v", numBeers, finishTime.Sub(startTime))
 
-	tally := createSyntaxTally(comprehendResults)
-	log.Printf("Syntax tally:\n%+v", tally)
+	log.Printf("sorted syntax:")
+	for _, beer := range comprehendResults {
+		log.Printf("\t%s", beer)
+	}
+
+	// get the existing parts of speech from S3 and append the new ones to it
+
+	// write the new parts of speech to S3
+	var beerTags brewerydb.BeerOutput
+	beerTags.BeerData = comprehendResults
+	tagsBlob, err := json.Marshal(beerTags)
+	if err != nil {
+		log.Fatalf("%s", err.Error())
+	}
+	err = awsutil.WriteByteSliceToS3(bucket, "beer_tags.json", tagsBlob, sess)
+	if err != nil {
+		log.Fatalf("%s", err.Error())
+	}
+
+	// append the list of newly processed beers to the existing list and write to S3
+	var processedBeers brewerydb.BeerOutput
+	processedBeers.BeerData = beersToParse
+	processedBlob, err := json.Marshal(processedBeers)
+	if err != nil {
+		log.Fatalf("%s", err.Error())
+	}
+	err = awsutil.WriteByteSliceToS3(bucket, "processed_beers.json", processedBlob, sess)
+	if err != nil {
+		log.Fatalf("%s", err.Error())
+	}
 	log.Printf("done")
 }
 
@@ -89,16 +123,7 @@ func parseBeersWithComprehend(beers []*string, sess *session.Session) ([]string,
 		}
 		taggedBeers = append(taggedBeers, strings.Join(tags, " "))
 	}
+	sort.Strings(taggedBeers)
 
 	return taggedBeers, nil
-}
-
-func createSyntaxTally(beers []string) map[string]int {
-	tally := make(map[string]int)
-
-	for _, syntax := range beers {
-		tally[syntax] = tally[syntax] + 1
-	}
-
-	return tally
 }
