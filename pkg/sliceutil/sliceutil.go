@@ -52,3 +52,16 @@ func GetMutuallyExclusiveElements(a []string, b []string) []string {
 
 	return s
 }
+
+// SplitSliceAt splits the input slice into two slices one [0:n] and one [n:len(s)]
+func SplitSliceAt(s []string, n int) ([]string, []string) {
+	if n >= len(s) {
+		return s, []string{}
+	}
+
+	if n < 0 {
+		return []string{}, s
+	}
+
+	return s[:n], s[n:]
+}

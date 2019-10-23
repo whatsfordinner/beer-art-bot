@@ -90,3 +90,30 @@ func TestGetMutuallyExclusiveElements(t *testing.T) {
 		})
 	}
 }
+
+var splitTests = map[string]struct {
+	s []string
+	n int
+	a []string
+	b []string
+}{
+	"split index beyond length":  {[]string{"foo", "bar"}, 3, []string{"foo", "bar"}, []string{}},
+	"split index at length":      {[]string{"foo", "bar"}, 2, []string{"foo", "bar"}, []string{}},
+	"split index within length":  {[]string{"foo", "bar"}, 1, []string{"foo"}, []string{"bar"}},
+	"split index at start":       {[]string{"foo", "bar"}, 0, []string{}, []string{"foo", "bar"}},
+	"split index less than zero": {[]string{"foo", "bar"}, -1, []string{}, []string{"foo", "bar"}},
+}
+
+func TestSplitSliceAt(t *testing.T) {
+	for test, tt := range splitTests {
+		t.Run(test, func(t *testing.T) {
+			resultA, resultB := SplitSliceAt(tt.s, tt.n)
+			if !SlicesEqual(resultA, tt.a) {
+				t.Errorf("result not equal to expected:\nresult:\t%v\nexpect:\t%v\n", resultA, tt.a)
+			}
+			if !SlicesEqual(resultB, tt.b) {
+				t.Errorf("result not equal to expected:\nresult:\t%v\nexpect:\t%v\n", resultB, tt.b)
+			}
+		})
+	}
+}
