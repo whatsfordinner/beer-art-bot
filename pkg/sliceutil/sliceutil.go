@@ -10,6 +10,21 @@ func SliceContains(s []string, e string) bool {
 	return false
 }
 
+// SlicesEqual returns true if the two slices have the same elements in the same order, otherwise false.
+func SlicesEqual(a []string, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+
+	return true
+}
+
 // AppendIfUnique is a utility function for only adding a beer or style that has already been seen.
 func AppendIfUnique(s []string, e string) []string {
 	if len(e) != 0 && !SliceContains(s, e) {

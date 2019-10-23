@@ -5,9 +5,9 @@ import (
 )
 
 var containsTests = map[string]struct {
-	testSlice        []string
-	testElement      string
-	shouldReturnTrue bool
+	s      []string
+	e      string
+	expect bool
 }{
 	"empty slice":                            {[]string{}, "test", false},
 	"populated slice, element doesn't exist": {[]string{"foo", "bar", "baz"}, "qux", false},
@@ -17,18 +17,40 @@ var containsTests = map[string]struct {
 func TestSliceContains(t *testing.T) {
 	for test, tt := range containsTests {
 		t.Run(test, func(t *testing.T) {
-			testResult := SliceContains(tt.testSlice, tt.testElement)
-			if testResult != tt.shouldReturnTrue {
-				t.Errorf("mismatched contains. Expected %v but got %v\n", tt.shouldReturnTrue, testResult)
+			result := SliceContains(tt.s, tt.e)
+			if result != tt.expect {
+				t.Errorf("mismatched contains. Expected %v but got %v\n", tt.expect, result)
+			}
+		})
+	}
+}
+
+var equalTests = map[string]struct {
+	a      []string
+	b      []string
+	expect bool
+}{
+	"empty slices":        {[]string{}, []string{}, true},
+	"equal slices":        {[]string{"foo", "bar", "baz"}, []string{"foo", "bar", "baz"}, true},
+	"uneven length":       {[]string{"foo"}, []string{"foo", "bar"}, false},
+	"equal but unordered": {[]string{"foo", "bar", "baz"}, []string{"bar", "foo", "baz"}, false},
+	"equal but different": {[]string{"foo", "bar", "baz"}, []string{"foo", "qux", "baz"}, false},
+}
+
+func TestSlicesEqual(t *testing.T) {
+	for test, tt := range equalTests {
+		t.Run(test, func(t *testing.T) {
+			if tt.expect != SlicesEqual(tt.a, tt.b) {
+				t.Errorf("expected %v but got %v for slices:\n%v\n%v\n", tt.expect, !tt.expect, tt.a, tt.b)
 			}
 		})
 	}
 }
 
 var appendTests = map[string]struct {
-	inputSlice          []string
-	inputElement        string
-	expectedOutputSlice []string
+	s      []string
+	e      string
+	expect []string
 }{
 	"empty string":          {[]string{"foo", "bar"}, "", []string{"foo", "bar"}},
 	"element exists":        {[]string{"foo", "bar"}, "foo", []string{"foo", "bar"}},
@@ -38,25 +60,18 @@ var appendTests = map[string]struct {
 func TestAppendIfUnique(t *testing.T) {
 	for test, tt := range appendTests {
 		t.Run(test, func(t *testing.T) {
-			resultSlice := AppendIfUnique(tt.inputSlice, tt.inputElement)
-
-			if len(resultSlice) != len(tt.expectedOutputSlice) {
-				t.Errorf("length mismatch. Expected %d elements but got %d elements\n", len(tt.expectedOutputSlice), len(resultSlice))
-			}
-
-			for i := range resultSlice {
-				if resultSlice[i] != tt.expectedOutputSlice[i] {
-					t.Errorf("element mismatch. Expected %s but got %s\n", resultSlice[i], tt.expectedOutputSlice[i])
-				}
+			result := AppendIfUnique(tt.s, tt.e)
+			if !SlicesEqual(result, tt.expect) {
+				t.Errorf("result not equal to expected:\nresult:\t%v\nexpect:\t%v\n", result, tt.expect)
 			}
 		})
 	}
 }
 
 var xorTests = map[string]struct {
-	inputA         []string
-	inputB         []string
-	expectedOutput []string
+	a      []string
+	b      []string
+	expect []string
 }{
 	"empty slices":       {[]string{}, []string{}, []string{}},
 	"no unique elements": {[]string{"foo", "bar", "baz"}, []string{"foo", "bar", "baz"}, []string{}},
@@ -68,16 +83,9 @@ var xorTests = map[string]struct {
 func TestGetMutuallyExclusiveElements(t *testing.T) {
 	for test, tt := range xorTests {
 		t.Run(test, func(t *testing.T) {
-			result := GetMutuallyExclusiveElements(tt.inputA, tt.inputB)
-
-			if len(result) != len(tt.expectedOutput) {
-				t.Errorf("length mistmatch. Expected %d elements but got %d elements\n", len(tt.expectedOutput), len(result))
-			}
-
-			for i := range result {
-				if result[i] != tt.expectedOutput[i] {
-					t.Errorf("element mismatch. Expected %s but got %s\n", result[i], tt.expectedOutput[i])
-				}
+			result := GetMutuallyExclusiveElements(tt.a, tt.b)
+			if !SlicesEqual(result, tt.expect) {
+				t.Errorf("result not equal to expected:\nresult:\t%v\nexpect:\t%v\n", result, tt.expect)
 			}
 		})
 	}
