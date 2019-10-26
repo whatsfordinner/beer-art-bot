@@ -14,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/comprehend"
 	"github.com/whatsfordinner/beer-art-bot/pkg/awsutil"
 	"github.com/whatsfordinner/beer-art-bot/pkg/brewerydb"
+	"github.com/whatsfordinner/beer-art-bot/pkg/sliceutil"
 )
 
 func main() {
@@ -48,20 +49,16 @@ func main() {
 	}
 
 	// get the list of all beers that have already been processed from S3
+	// if the list doesn't exist, assume that none have been processed yet
 
 	// make a slice of beer names that contain only beers that haven't been processed
-	numBeers := 20
+	numBeers := 40
 	beersToParse := beers.BeerData[0:numBeers]
-	// convert the strings to string pointers for use with the AWS SDK
-	awsBeers := []*string{}
-	for _, beer := range beersToParse {
-		awsBeers = append(awsBeers, aws.String(strings.ToLower(beer)))
-	}
 	//TODO(whatsfordinner): comprehend costs money so we should only be comprehending beers that
 	// haven't been read yet
 	startTime := time.Now()
 	// get the beers tagged for parts of speech by comprehend
-	comprehendResults, err := parseBeersWithComprehend(awsBeers, sess)
+	comprehendResults, err := parseBeersWithComprehend(beersToParse, sess)
 	if err != nil {
 		log.Fatalf("%s", err)
 	}
@@ -101,27 +98,38 @@ func main() {
 	log.Printf("done")
 }
 
-func parseBeersWithComprehend(beers []*string, sess *session.Session) ([]string, error) {
+func parseBeersWithComprehend(beers []string, sess *session.Session) ([]string, error) {
 	log.Printf("starting to parse %d beers with comprehend", len(beers))
+	batchSize := 25
 	svc := comprehend.New(sess)
 	taggedBeers := []string{}
-	//TODO(whatsfordinner): BatchDetectSyntax can only comprehend 25 entries at once so this
-	// needs to be configured to process all the beers through batches of 25
-	result, err := svc.BatchDetectSyntax(&comprehend.BatchDetectSyntaxInput{
-		LanguageCode: aws.String("en"),
-		TextList:     beers,
-	})
-
-	if err != nil {
-		return taggedBeers, err
-	}
-
-	for _, results := range result.ResultList {
-		tags := []string{}
-		for _, tokens := range results.SyntaxTokens {
-			tags = append(tags, *tokens.PartOfSpeech.Tag)
+	beersToTag, beersRemaining := sliceutil.SplitSliceAt(beers, batchSize)
+	for len(beersToTag) > 0 {
+		// converting the beer strings into string pointers for use with the AWS SDK
+		awsBeers := []*string{}
+		for _, beer := range beersToTag {
+			awsBeers = append(awsBeers, aws.String(strings.ToLower(beer)))
 		}
-		taggedBeers = append(taggedBeers, strings.Join(tags, " "))
+
+		// submitting the batch of beers to be tagged by comprehend
+		result, err := svc.BatchDetectSyntax(&comprehend.BatchDetectSyntaxInput{
+			LanguageCode: aws.String("en"),
+			TextList:     awsBeers,
+		})
+		if err != nil {
+			return taggedBeers, err
+		}
+
+		// the actual part of speech tags are nested quite deeply so we extract them
+		// and then pull them into a single string
+		for _, results := range result.ResultList {
+			tags := []string{}
+			for _, tokens := range results.SyntaxTokens {
+				tags = append(tags, *tokens.PartOfSpeech.Tag)
+			}
+			taggedBeers = append(taggedBeers, strings.Join(tags, " "))
+		}
+		beersToTag, beersRemaining = sliceutil.SplitSliceAt(beersRemaining, batchSize)
 	}
 	sort.Strings(taggedBeers)
 
