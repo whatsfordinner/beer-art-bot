@@ -10,6 +10,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 )
 
+// WriteByteSliceToS3 writes the provided slice of bytes to the object in the bucket provided,
+// overwriting anything that already exists
 func WriteByteSliceToS3(bucket string, key string, blob []byte, sess *session.Session) error {
 	uploader := s3manager.NewUploader(sess)
 	log.Printf("uploading %s to %s", key, bucket)
@@ -25,6 +27,7 @@ func WriteByteSliceToS3(bucket string, key string, blob []byte, sess *session.Se
 	return nil
 }
 
+// GetByteSliceFromS3 retrieves the contents of the specified object as a slice of bytes
 func GetByteSliceFromS3(bucket string, key string, sess *session.Session) ([]byte, error) {
 	downloader := s3manager.NewDownloader(sess)
 	awsBuff := aws.NewWriteAtBuffer(make([]byte, 0))
