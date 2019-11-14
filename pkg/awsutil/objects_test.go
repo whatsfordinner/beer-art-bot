@@ -5,7 +5,7 @@ import (
 )
 
 var objectExistsTests = map[string]struct {
-	o   string
+	k   string
 	b   string
 	e   bool
 	err bool
@@ -21,7 +21,7 @@ func TestObjectExistsInBucket(t *testing.T) {
 	testSession := getLocalstackSession()
 	for test, tt := range objectExistsTests {
 		t.Run(test, func(t *testing.T) {
-			result, err := ObjectExistsInBucket(tt.b, tt.o, testSession)
+			result, err := ObjectExistsInBucket(tt.b, tt.k, testSession)
 
 			if tt.err && (err == nil) {
 				t.Errorf("expected error but got no error\n")
@@ -38,5 +38,4 @@ func TestObjectExistsInBucket(t *testing.T) {
 			}
 		})
 	}
-
 }
