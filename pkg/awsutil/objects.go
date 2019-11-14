@@ -10,12 +10,11 @@ import (
 // provided or false otherwise
 func ObjectExistsInBucket(bucket string, key string, sess *session.Session) (bool, error) {
 	svc := s3.New(sess)
-	input := &s3.ListObjectsInput{
+	input := &s3.ListObjectsV2Input{
 		Bucket: aws.String(bucket),
-		Prefix: aws.String(key),
 	}
 
-	result, err := svc.ListObjects(input)
+	result, err := svc.ListObjectsV2(input)
 	if err != nil {
 		return false, err
 	}
