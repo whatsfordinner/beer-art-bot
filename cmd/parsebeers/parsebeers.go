@@ -32,13 +32,13 @@ func main() {
 
 func parseBeers(bucket string, sess *session.Session) error {
 	// get the list of all beers from S3
-	beers, err := getBeerOutputFromS3(bucket, "beer_names.json", true, sess)
+	beers, err := brewerydb.GetBeerOutputFromS3(bucket, "beer_names.json", true, sess)
 	if err != nil {
 		return err
 	}
 
 	// get the list of all beers that have already been processed from S3
-	previouslyProcessedBeers, err := getBeerOutputFromS3(bucket, "processed_beers.json", false, sess)
+	previouslyProcessedBeers, err := brewerydb.GetBeerOutputFromS3(bucket, "processed_beers.json", false, sess)
 	if err != nil {
 		return err
 	}
@@ -58,7 +58,7 @@ func parseBeers(bucket string, sess *session.Session) error {
 	log.Printf("Parsing %d beers with comprehend took %v", numBeers, finishTime.Sub(startTime))
 
 	// get the list of already processed tags from S3
-	previouslyProcessedTags, err := getBeerOutputFromS3(bucket, "beer_tags.json", false, sess)
+	previouslyProcessedTags, err := brewerydb.GetBeerOutputFromS3(bucket, "beer_tags.json", false, sess)
 	if err != nil {
 		return err
 	}
@@ -66,7 +66,7 @@ func parseBeers(bucket string, sess *session.Session) error {
 	// write all beer tags to S3
 	var beerTags brewerydb.BeerOutput
 	beerTags.BeerData = append(previouslyProcessedTags.BeerData, comprehendResults...)
-	err = writeBeerOutputToS3(bucket, "beer_tags.json", beerTags, sess)
+	err = brewerydb.WriteBeerOutputToS3(bucket, "beer_tags.json", beerTags, sess)
 	if err != nil {
 		return err
 	}
@@ -74,7 +74,7 @@ func parseBeers(bucket string, sess *session.Session) error {
 	// append the list of newly processed beers to the existing list and write to S3
 	var processedBeers brewerydb.BeerOutput
 	processedBeers.BeerData = append(previouslyProcessedBeers.BeerData, beersToParse...)
-	err = writeBeerOutputToS3(bucket, "processed_beers.json", processedBeers, sess)
+	err = brewerydb.WriteBeerOutputToS3(bucket, "processed_beers.json", processedBeers, sess)
 	if err != nil {
 		return err
 	}
