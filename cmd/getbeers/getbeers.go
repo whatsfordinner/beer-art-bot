@@ -12,8 +12,10 @@ import (
 )
 
 type getBeersConfig struct {
-	Bucket string
-	Region string
+	Bucket            string
+	Region            string
+	BreweryDBAPIKey   string
+	BreweryDBEndpoint string
 }
 
 func main() {
@@ -31,7 +33,7 @@ func main() {
 	}
 
 	log.Printf("fetching beers and styles from BreweryDB")
-	names, styles, err := brewerydb.GetBeerData()
+	names, styles, err := brewerydb.GetBeerData(config.BreweryDBAPIKey, config.BreweryDBEndpoint)
 	if err != nil {
 		log.Fatalf("%s", err.Error())
 	}
@@ -54,13 +56,26 @@ func loadGetBeersConfig() (getBeersConfig, error) {
 	if !exist {
 		return getBeersConfig{}, errors.New("UPLOAD_BUCKET not set, cannot continue")
 	}
+
 	region, exist := os.LookupEnv("UPLOAD_REGION")
 	if !exist {
 		return getBeersConfig{}, errors.New("UPLOAD_REGION not set, cannot continue")
 	}
 
+	apiKey, exist := os.LookupEnv("BREWERYDB_APIKEY")
+	if !exist {
+		return getBeersConfig{}, errors.New("BREWERYDB_APIKEY not set, cannot continue")
+	}
+
+	endpoint, exist := os.LookupEnv("BREWERYDB_ENDPOINT")
+	if !exist {
+		return getBeersConfig{}, errors.New("BREWERYDB_ENDPOINT not set, cannot continue")
+	}
+
 	return getBeersConfig{
-		Bucket: bucket,
-		Region: region,
+		Bucket:            bucket,
+		Region:            region,
+		BreweryDBAPIKey:   apiKey,
+		BreweryDBEndpoint: endpoint,
 	}, nil
 }
