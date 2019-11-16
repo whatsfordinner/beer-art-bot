@@ -2,7 +2,6 @@ package brewerydb
 
 import (
 	"encoding/json"
-	"log"
 	"time"
 
 	"github.com/whatsfordinner/beer-art-bot/pkg/sliceutil"
@@ -54,12 +53,7 @@ func parseQueryBeersAPI(data []byte) ([]beerDetails, int, int, error) {
 
 // GetBeerData queries the BreweryDB /beers endpoint and returns a list of all unique beer names and styles.
 // It requires the environment variables "BREWERYDB_APIKEY" and "BREWERYDB_ENDPOINT" to be populated.
-func GetBeerData() (BeerOutput, BeerOutput, error) {
-	config, err := loadBreweryDBConfig()
-	if err != nil {
-		log.Fatalf("%s", err.Error())
-	}
-
+func GetBeerData(apiKey string, endpoint string) (BeerOutput, BeerOutput, error) {
 	// names will contain the final list of unique beers
 	var names BeerOutput
 	// styles will contain the final list of unique beer styles
@@ -70,7 +64,7 @@ func GetBeerData() (BeerOutput, BeerOutput, error) {
 	// maxPage is intentionally set here because we don't know how many pages the query will have until we return the first time
 	maxPage := 1
 	for currPage = 1; currPage <= maxPage; currPage++ {
-		rawResults, err := queryBeersAPI(currPage, config.Endpoint, config.APIKey)
+		rawResults, err := queryBeersAPI(currPage, endpoint, apiKey)
 		if err != nil {
 			return names, styles, err
 		}
