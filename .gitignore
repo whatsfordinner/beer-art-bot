@@ -2,3 +2,4 @@ cmd/getbeers/*.sh
 cmd/getbeers/*.json
 cmd/getbeers/getbeers
 cmd/parsebeers/parsebeers
+cmd/tweetbeer/tweetbeer
