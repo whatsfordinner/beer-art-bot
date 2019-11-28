@@ -2,9 +2,9 @@ package wordnik
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 )
 
@@ -16,6 +16,10 @@ type Client struct {
 type randomWordReturn struct {
 	ID   int    `json:"id"`
 	Word string `josn:"word"`
+}
+
+type messageReturn struct {
+	Message string `json:"message"`
 }
 
 // NewClient takes in your Wordnik API key and returns a Client
@@ -41,7 +45,7 @@ func queryWordnikAPI(apiKey string, typeOfWord string) (randomWordReturn, error)
 	queryString := fmt.Sprintf("%s%s&%s", endpoint, params, auth)
 
 	response, err := http.Get(queryString)
-	if err != nil || response.StatusCode != 200 {
+	if err != nil {
 		return randomWordReturn{}, err
 	}
 
@@ -50,7 +54,17 @@ func queryWordnikAPI(apiKey string, typeOfWord string) (randomWordReturn, error)
 	if err != nil {
 		return randomWordReturn{}, err
 	}
-	log.Printf("%+v", wordBlob)
+
+	if response.StatusCode != 200 {
+		var returnObject messageReturn
+		err = json.Unmarshal(wordBlob, &returnObject)
+		if err != nil {
+			return randomWordReturn{}, err
+		}
+
+		errorString := fmt.Sprintf("wordnik API error: Status Code: %d. Message: %s", response.StatusCode, returnObject.Message)
+		return randomWordReturn{}, errors.New(errorString)
+	}
 
 	var wordObject randomWordReturn
 	err = json.Unmarshal(wordBlob, &wordObject)
@@ -58,6 +72,5 @@ func queryWordnikAPI(apiKey string, typeOfWord string) (randomWordReturn, error)
 		return randomWordReturn{}, err
 	}
 
-	log.Printf("%+v", wordObject)
 	return wordObject, nil
 }
