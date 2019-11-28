@@ -50,6 +50,7 @@ func queryWordnikAPI(apiKey string, typeOfWord string) (randomWordReturn, error)
 	if err != nil {
 		return randomWordReturn{}, err
 	}
+	log.Printf("%+v", wordBlob)
 
 	var wordObject randomWordReturn
 	err = json.Unmarshal(wordBlob, &wordObject)
