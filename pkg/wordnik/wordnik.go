@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 )
 
@@ -56,5 +57,6 @@ func queryWordnikAPI(apiKey string, typeOfWord string) (randomWordReturn, error)
 		return randomWordReturn{}, err
 	}
 
+	log.Printf("%+v", wordObject)
 	return wordObject, nil
 }
